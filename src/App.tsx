@@ -385,7 +385,7 @@ function App() {
               
               <div className="expert-info-grid">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="expert-name-input">專家姓名</label>
+                  <label className="form-label" htmlFor="expert-name-input">專家姓名<span className="required-star">*</span></label>
                   <input 
                     type="text" 
                     id="expert-name-input"
@@ -398,7 +398,7 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <span className="form-label">專家背景</span>
+                  <span className="form-label">專家背景<span className="required-star">*</span></span>
                   <div className="checkbox-group">
                     {EXPERT_BACKGROUNDS.map((bg) => (
                       <label key={bg} className="checkbox-label">
@@ -422,7 +422,7 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="exp-years-input">臨床/教學年資</label>
+                  <label className="form-label" htmlFor="exp-years-input">臨床/教學年資<span className="required-star">*</span></label>
                   <input 
                     type="text" 
                     id="exp-years-input"
@@ -451,7 +451,7 @@ function App() {
                     <div key={q.id} className="question-card">
                       <div className="question-header">
                         <span className="question-number">{q.id}</span>
-                        <p className="question-text">{q.text}</p>
+                        <p className="question-text">{q.text}<span className="required-star">*</span></p>
                       </div>
 
                       <div className="rating-container">
@@ -507,7 +507,7 @@ function App() {
                     <div key={q.id} className="question-card">
                       <div className="question-header">
                         <span className="question-number">{q.id}</span>
-                        <p className="question-text">{q.text}</p>
+                        <p className="question-text">{q.text}<span className="required-star">*</span></p>
                       </div>
 
                       <div className="rating-container">
