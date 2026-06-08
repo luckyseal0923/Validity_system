@@ -154,22 +154,30 @@ function App() {
 
   const validateForm = (): boolean => {
     if (!expertName.trim()) {
-      setValidationError('請輸入專家姓名');
+      const msg = '請輸入專家姓名';
+      setValidationError(msg);
+      alert(msg);
       return false;
     }
     if (selectedBackgrounds.length === 0 && !backgroundOther.trim()) {
-      setValidationError('請至少選擇或填寫一項專家背景');
+      const msg = '請至少選擇或填寫一項專家背景';
+      setValidationError(msg);
+      alert(msg);
       return false;
     }
     if (!experienceYears.trim()) {
-      setValidationError('請輸入臨床/教學年資');
+      const msg = '請輸入臨床/教學年資';
+      setValidationError(msg);
+      alert(msg);
       return false;
     }
     
     // Check if all overall questions have score
     for (const q of OVERALL_QUESTIONS) {
       if (!overallScores[q.id]) {
-        setValidationError(`請完成「第一部分：整體教案內容效度審查」第 ${q.id} 題的給分`);
+        const msg = `請完成「一、OSCE之整體教案內容效度審查」第 ${q.id} 題的給分`;
+        setValidationError(msg);
+        alert(msg);
         return false;
       }
     }
@@ -177,7 +185,9 @@ function App() {
     // Check if all checklist questions have score
     for (const q of CHECKLIST_QUESTIONS) {
       if (!checklistScores[q.id]) {
-        setValidationError(`請完成「第二部分：Checklist 評分項目內容效度審查」第 ${q.id} 題的給分`);
+        const msg = `請完成「二、OSCE Checklist 評分項目內容效度審查」第 ${q.id} 題的給分`;
+        setValidationError(msg);
+        alert(msg);
         return false;
       }
     }
