@@ -753,9 +753,9 @@ function App() {
       <header className="app-header">
         <div className="app-title-wrapper" onClick={handleGoHome} style={{ cursor: 'pointer' }}>
           <Activity className="app-title-icon" size={32} />
-          <h1>OSCE 專家內容效度量表產生平台</h1>
+          <h1>萬芳醫院-內容效度分析系統</h1>
         </div>
-        <p className="app-subtitle">自訂 OSCE 量表、發送審查連結與即時 CVI 數據計算平台</p>
+        <p className="app-subtitle">Wanfang Content Validity Analysis System</p>
       </header>
 
       {/* Tabs (Only visible when viewing/filling a specific survey or its dashboard) */}
@@ -1684,7 +1684,7 @@ function App() {
 
       {/* Footer */}
       <footer className="app-footer">
-        <p>© 2026 OSCE Validity Platform. 版權所有。 資料庫串接自 Supabase。</p>
+        <p>© 2026 萬芳醫院-內容效度分析系統 (Wanfang Content Validity Analysis System). 版權所有。 資料庫串接自 Supabase。</p>
       </footer>
     </div>
   );
