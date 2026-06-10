@@ -115,13 +115,17 @@ const EXPERT_BACKGROUNDS = [
 
 function App() {
   // Navigation Routing States
-  const [view, setView] = useState<'portal' | 'create' | 'created' | 'survey' | 'dashboard' | 'loading'>('loading');
+  const [view, setView] = useState<'portal' | 'create' | 'created' | 'survey' | 'dashboard' | 'loading' | 'my-surveys'>('loading');
   const [currentSurveyId, setCurrentSurveyId] = useState<string | null>(null);
   const [surveyStructure, setSurveyStructure] = useState<SurveyData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Portal States
-  const [inputSurveyId, setInputSurveyId] = useState('');
+  const [loginEmployeeId, setLoginEmployeeId] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [mySurveys, setMySurveys] = useState<SurveyData[]>([]);
+  const [myResponsesCount, setMyResponsesCount] = useState<Record<string, number>>({});
+  const [isLoadingMySurveys, setIsLoadingMySurveys] = useState(false);
 
   // Creator States
   const [creatorName, setCreatorName] = useState('');
@@ -202,6 +206,144 @@ function App() {
       console.error('Error loading survey:', err);
       setErrorMsg(err.message || '載入失敗。');
       setView('portal');
+    }
+  };
+
+  // Portal login: fetch surveys matching employee_id and password
+  const handlePortalLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmployeeId.trim()) {
+      alert('請輸入員工編號');
+      return;
+    }
+    if (!loginPassword.trim()) {
+      alert('請輸入自設密碼');
+      return;
+    }
+
+    setIsLoadingMySurveys(true);
+    setErrorMsg(null);
+
+    try {
+      // Fetch matching surveys
+      const { data: surveys, error: surveyError } = await supabase
+        .from('cvi_surveys')
+        .select('*')
+        .eq('employee_id', loginEmployeeId.trim())
+        .eq('password', loginPassword.trim())
+        .order('created_at', { ascending: false });
+
+      if (surveyError) throw surveyError;
+
+      if (!surveys || surveys.length === 0) {
+        alert('查無符合此員工編號與自設密碼的量表。');
+        setIsLoadingMySurveys(false);
+        return;
+      }
+
+      setMySurveys(surveys as SurveyData[]);
+
+      // Fetch response counts
+      const surveyIds = surveys.map(s => s.id).filter((id): id is string => !!id);
+      if (surveyIds.length > 0) {
+        const { data: responses, error: responseError } = await supabase
+          .from('cvi_responses')
+          .select('survey_id')
+          .in('survey_id', surveyIds);
+
+        if (responseError) throw responseError;
+
+        const counts: Record<string, number> = {};
+        // Initialize all matching surveys count with 0
+        surveyIds.forEach(id => {
+          counts[id] = 0;
+        });
+        // Aggregate counts
+        responses?.forEach(r => {
+          if (r.survey_id && counts[r.survey_id] !== undefined) {
+            counts[r.survey_id]++;
+          }
+        });
+        setMyResponsesCount(counts);
+      } else {
+        setMyResponsesCount({});
+      }
+
+      setView('my-surveys');
+    } catch (err: any) {
+      console.error('Error logging in to portal:', err);
+      alert('登入失敗，請確認網路連線或帳密：' + err.message);
+    } finally {
+      setIsLoadingMySurveys(false);
+    }
+  };
+
+  // Select survey from my list and unlock dashboard
+  const handleSelectSurveyDashboard = async (survey: SurveyData) => {
+    if (!survey.id) return;
+    setView('loading');
+    setCurrentSurveyId(survey.id);
+    setSurveyStructure(survey);
+    
+    // Automatically set dashboard credentials and unlock state
+    setDashboardEmployeeId(survey.employee_id);
+    setDashboardPassword(survey.password || '');
+    setIsDashboardUnlocked(true);
+    
+    // Fetch submissions for this survey
+    setIsLoadingSubmissions(true);
+    setDashboardError(null);
+    try {
+      const { data, error } = await supabase
+        .from('cvi_responses')
+        .select('*')
+        .eq('survey_id', survey.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setSubmissions((data || []) as ExpertResponse[]);
+      setView('dashboard');
+    } catch (err: any) {
+      console.error('Error loading responses:', err);
+      setDashboardError('無法取得評估數據：' + err.message);
+      setView('my-surveys');
+    } finally {
+      setIsLoadingSubmissions(false);
+    }
+  };
+
+  // Back to my surveys list and refresh response count
+  const handleBackToMySurveys = () => {
+    window.history.pushState({}, '', window.location.pathname);
+    setCurrentSurveyId(null);
+    setSurveyStructure(null);
+    setIsDashboardUnlocked(false);
+    refreshMySurveysCounts();
+    setView('my-surveys');
+  };
+
+  const refreshMySurveysCounts = async () => {
+    const surveyIds = mySurveys.map(s => s.id).filter((id): id is string => !!id);
+    if (surveyIds.length > 0) {
+      try {
+        const { data: responses } = await supabase
+          .from('cvi_responses')
+          .select('survey_id')
+          .in('survey_id', surveyIds);
+        
+        const counts: Record<string, number> = {};
+        surveyIds.forEach(id => {
+          counts[id] = 0;
+        });
+        responses?.forEach(r => {
+          if (r.survey_id && counts[r.survey_id] !== undefined) {
+            counts[r.survey_id]++;
+          }
+        });
+        setMyResponsesCount(counts);
+      } catch (err) {
+        console.error('Failed to refresh counts:', err);
+      }
     }
   };
 
@@ -316,12 +458,15 @@ function App() {
       if (type === 'survey') {
         setCopiedSurvey(true);
         setTimeout(() => setCopiedSurvey(false), 2000);
+        alert('已成功複製專家線上填寫連結！');
       } else {
         setCopiedDashboard(true);
         setTimeout(() => setCopiedDashboard(false), 2000);
+        alert('已成功複製效度分析儀表板連結！');
       }
     }).catch(err => {
       console.error('Copy failed:', err);
+      alert('複製失敗，您的瀏覽器可能不支援或限制剪貼簿權限。');
     });
   };
 
@@ -575,6 +720,10 @@ function App() {
     window.history.pushState({}, '', window.location.pathname);
     setCurrentSurveyId(null);
     setSurveyStructure(null);
+    setLoginPassword('');
+    setMySurveys([]);
+    setMyResponsesCount({});
+    setIsDashboardUnlocked(false);
     setView('portal');
   };
 
@@ -664,37 +813,45 @@ function App() {
               <p>輸入負責人資料、量表名稱，並自訂或修改題項，一鍵產生專家線上填寫連結與分析後台。</p>
             </div>
 
-            <div className="portal-card">
+            <div className="portal-card" style={{ cursor: 'default' }}>
               <div className="portal-card-icon">
                 <BarChart3 size={28} />
               </div>
               <h3>進入現有量表分析</h3>
-              <p>如果您已建立量表，請輸入該量表的 UUID 識別碼以進入數據分析與解鎖後台。</p>
+              <p>如果您已建立量表，請輸入起單人員工編號與自設解鎖密碼，登入查看您建立的所有量表分析。</p>
               
-              <div className="form-group" style={{ width: '100%', marginTop: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="輸入量表 UUID"
-                  value={inputSurveyId}
-                  onChange={(e) => setInputSurveyId(e.target.value)}
-                  style={{ textAlign: 'center', fontSize: '0.85rem' }}
-                />
+              <form onSubmit={handlePortalLogin} className="login-form-portal" style={{ width: '100%', marginTop: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="起單人員工編號"
+                    value={loginEmployeeId}
+                    onChange={(e) => setLoginEmployeeId(e.target.value)}
+                    style={{ textAlign: 'center', fontSize: '0.85rem' }}
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                  <input 
+                    type="password" 
+                    className="form-input" 
+                    placeholder="自設解鎖密碼"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    style={{ textAlign: 'center', fontSize: '0.85rem' }}
+                    required
+                  />
+                </div>
                 <button 
+                  type="submit"
                   className="primary-btn" 
-                  style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', marginTop: '0.5rem', borderRadius: '6px' }}
-                  onClick={() => {
-                    if (inputSurveyId.trim()) {
-                      window.history.pushState({}, '', `${window.location.pathname}?survey_id=${inputSurveyId.trim()}&view=dashboard`);
-                      loadSurveyStructure(inputSurveyId.trim(), true);
-                    } else {
-                      alert('請先輸入量表 UUID');
-                    }
-                  }}
+                  style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', marginTop: '0.25rem', borderRadius: '6px' }}
+                  disabled={isLoadingMySurveys}
                 >
-                  進入後台
+                  {isLoadingMySurveys ? '登入中...' : '登入並管理量表'}
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>
@@ -918,6 +1075,78 @@ function App() {
             </button>
             <button className="primary-btn" onClick={handleOpenDashboardLink}>
               <Unlock size={18} /> 直接進入數據後台
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2.5 My Surveys List View */}
+      {view === 'my-surveys' && (
+        <div className="glass-card">
+          <div className="section-title-container">
+            <ArrowLeft className="section-icon" style={{ cursor: 'pointer' }} onClick={handleGoHome} size={20} />
+            <h2 className="section-title">自訂量表管理清單</h2>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', textAlign: 'left' }}>
+            起單人：<strong>{mySurveys[0]?.creator_name || ''}</strong> (員編：{loginEmployeeId})
+          </p>
+
+          <div className="my-surveys-list">
+            {mySurveys.map((survey) => {
+              const surveyUrl = `${window.location.origin}${window.location.pathname}?survey_id=${survey.id}`;
+              const dashboardUrl = `${window.location.origin}${window.location.pathname}?survey_id=${survey.id}&view=dashboard`;
+              const responseCount = myResponsesCount[survey.id || ''] || 0;
+              const formattedDate = survey.created_at ? new Date(survey.created_at).toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) : '未知時間';
+
+              return (
+                <div key={survey.id} className="survey-list-item-card">
+                  <div className="survey-item-main-info">
+                    <h3 className="survey-item-title">{survey.title}</h3>
+                    <div className="survey-item-meta">
+                      <span className="survey-meta-date">建立於：{formattedDate}</span>
+                      <span className="survey-meta-count">
+                        <Users size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                        專家填寫人數：<strong>{responseCount}</strong> 位
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="survey-item-actions">
+                    <button 
+                      className="primary-btn action-btn-view"
+                      onClick={() => handleSelectSurveyDashboard(survey)}
+                    >
+                      <BarChart3 size={16} /> 進入效度分析
+                    </button>
+                    
+                    <button 
+                      className="action-btn-copy"
+                      onClick={() => handleCopyText(surveyUrl, 'survey')}
+                    >
+                      <ClipboardList size={16} /> 複製專家填寫網址
+                    </button>
+
+                    <button 
+                      className="action-btn-copy"
+                      onClick={() => handleCopyText(dashboardUrl, 'dashboard')}
+                    >
+                      <BarChart3 size={16} /> 複製分析後台網址
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="submit-container" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', width: '100%', alignItems: 'center' }}>
+            <button className="primary-btn" onClick={handleGoHome} style={{ background: 'var(--secondary)', maxWidth: '250px' }}>
+              <Home size={18} /> 返回首頁
             </button>
           </div>
         </div>
@@ -1438,10 +1667,15 @@ function App() {
               </div>
 
               {/* Portal back actions */}
-              <div className="submit-container" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', width: '100%', alignItems: 'center' }}>
+              <div className="submit-container" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', width: '100%', display: 'flex', flexDirection: 'row', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button className="primary-btn" onClick={handleGoHome} style={{ background: 'var(--secondary)', maxWidth: '250px' }}>
                   <Home size={18} /> 返回首頁
                 </button>
+                {mySurveys.length > 0 && (
+                  <button className="primary-btn" onClick={handleBackToMySurveys} style={{ background: 'var(--primary)', maxWidth: '250px' }}>
+                    <ArrowLeft size={18} /> 返回量表清單
+                  </button>
+                )}
               </div>
             </div>
           )}

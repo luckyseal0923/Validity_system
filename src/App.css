@@ -1332,3 +1332,113 @@ body {
   gap: 1rem;
 }
 
+/* My Surveys List styles */
+.my-surveys-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.survey-list-item-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+  gap: 1rem;
+}
+
+.survey-list-item-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(59, 142, 114, 0.06);
+}
+
+.survey-item-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.survey-item-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.survey-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+}
+
+.survey-meta-date {
+  display: inline-flex;
+  align-items: center;
+}
+
+.survey-meta-count {
+  display: inline-flex;
+  align-items: center;
+}
+
+.survey-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 200px;
+}
+
+.action-btn-view {
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.action-btn-copy {
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border: 1px solid var(--border-color);
+  background: #fafafa;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.action-btn-copy:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: #cbdcd1;
+}
+
+@media (max-width: 768px) {
+  .survey-list-item-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .survey-item-actions {
+    min-width: unset;
+  }
+}
+
+
