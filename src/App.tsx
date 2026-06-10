@@ -152,6 +152,7 @@ function App() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Dashboard Lock Screen States
+  const [dashboardEmployeeId, setDashboardEmployeeId] = useState('');
   const [dashboardPassword, setDashboardPassword] = useState('');
   const [isDashboardUnlocked, setIsDashboardUnlocked] = useState(false);
 
@@ -438,11 +439,14 @@ function App() {
     e.preventDefault();
     if (!surveyStructure) return;
     
-    if (dashboardPassword === surveyStructure.password) {
+    if (
+      dashboardEmployeeId.trim() === surveyStructure.employee_id &&
+      dashboardPassword === surveyStructure.password
+    ) {
       setIsDashboardUnlocked(true);
       fetchDashboardSubmissions();
     } else {
-      alert('解鎖密碼錯誤！請重新輸入。');
+      alert('員工編號或解鎖密碼錯誤！請重新輸入。');
       setDashboardPassword('');
     }
   };
@@ -604,6 +608,37 @@ function App() {
         </div>
         <p className="app-subtitle">自訂 OSCE 量表、發送審查連結與即時 CVI 數據計算平台</p>
       </header>
+
+      {/* Tabs (Only visible when viewing/filling a specific survey or its dashboard) */}
+      {(view === 'survey' || view === 'dashboard') && surveyStructure && (
+        <nav className="tab-navigation">
+          <button 
+            className={`tab-btn ${view === 'survey' ? 'active' : ''}`}
+            onClick={() => {
+              window.history.pushState({}, '', `${window.location.pathname}?survey_id=${currentSurveyId}`);
+              setView('survey');
+            }}
+            id="tab-expert-form"
+          >
+            <ClipboardList size={18} />
+            填寫評量表
+          </button>
+          <button 
+            className={`tab-btn ${view === 'dashboard' ? 'active' : ''}`}
+            onClick={() => {
+              window.history.pushState({}, '', `${window.location.pathname}?survey_id=${currentSurveyId}&view=dashboard`);
+              setView('dashboard');
+              if (isDashboardUnlocked) {
+                fetchDashboardSubmissions();
+              }
+            }}
+            id="tab-analytics-dashboard"
+          >
+            <BarChart3 size={18} />
+            查看數據分析
+          </button>
+        </nav>
+      )}
 
       {/* Main Panel View Routing */}
 
@@ -1113,18 +1148,32 @@ function App() {
           <div className="lock-icon-wrapper">
             <Lock size={32} />
           </div>
-          <h2>儀表板已鎖定</h2>
-          <p>請輸入本量表在建立時起單負責人自設的解鎖密碼，以查看即時效度分析數據。</p>
+          <h2>即時數據分析登入</h2>
+          <p>請輸入起單負責人的員工編號與自設解鎖密碼，以開啟即時效度分析儀表板。</p>
           
           <form onSubmit={handleUnlockDashboard} className="lock-form">
             <div className="form-group">
+              <label className="form-label" style={{ textAlign: 'left' }}>起單人員工編號</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="請輸入員工編號"
+                value={dashboardEmployeeId}
+                onChange={(e) => setDashboardEmployeeId(e.target.value)}
+                style={{ textAlign: 'center' }}
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label" style={{ textAlign: 'left' }}>自設解鎖密碼</label>
               <input 
                 type="password" 
                 className="form-input" 
                 placeholder="請輸入解鎖密碼"
                 value={dashboardPassword}
                 onChange={(e) => setDashboardPassword(e.target.value)}
-                style={{ textAlign: 'center', fontSize: '1.1rem' }}
+                style={{ textAlign: 'center' }}
                 required
               />
             </div>
